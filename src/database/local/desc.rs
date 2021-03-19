@@ -36,8 +36,8 @@ struct PackageDescription {
 }
 
 impl PackageDescription {
-    pub fn new<P: AsRef<Path>>(desc: P) -> Result<Self, Box<dyn std::error::Error>> {
-        let desc = std::fs::read_to_string(desc)?;
+    pub fn read_from_file<P: AsRef<Path>>(filepath: P) -> Result<Self, Box<dyn std::error::Error>> {
+        let desc = std::fs::read_to_string(filepath)?;
         let mut name = None;
         let mut version = None;
         let mut pkgbase = None;
@@ -218,10 +218,11 @@ struct OptionalDependency {
     reason: String,
 }
 
+#[cfg(test)]
 mod test {
     #[test]
     fn test_read_desc() {
-        let v = super::PackageDescription::new("/var/lib/pacman/local/linux-5.11.6.arch1-1/desc");
+        let v = super::PackageDescription::read_from_file("/var/lib/pacman/local/linux-5.11.6.arch1-1/desc");
         assert!(v.is_ok());
         println!("{:#?}", v.unwrap());
     }

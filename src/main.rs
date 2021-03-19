@@ -6,6 +6,8 @@ use crate::interface::Mode;
 
 use structopt::StructOpt;
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 fn main() {
     println!("Hello, world!");
     let args = Args::from_args();
