@@ -11,8 +11,19 @@ pub mod mtree;
 /// contains information about a specific installed pacakge, and the files it owns.
 #[derive(Debug)]
 pub struct LocalDatabaseEntry {
-    desc: PackageDescription,
-    mtree: Vec<MTreeEntry>,
+    pub desc: PackageDescription,
+    pub mtree: Vec<MTreeEntry>,
+}
+
+pub struct LocalDatabase(Vec<LocalDatabaseEntry>);
+
+impl LocalDatabase {
+    pub fn iter(&self) -> impl Iterator<Item = &LocalDatabaseEntry> {
+        self.0.iter()
+    }
+    pub fn pacakge_names(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(|x| x.desc.name.as_str())
+    }
 }
 
 impl LocalDatabaseEntry {
@@ -40,6 +51,35 @@ impl LocalDatabaseEntry {
     pub fn owns<P: AsRef<Path>>(&self, file: P) -> bool {
         self.files().any(|x| x == file.as_ref())
     }
+}
+
+fn is_valid_local_entry_dir<P: AsRef<Path>>(path: P) -> bool {
+    let path = path.as_ref();
+    path.is_dir() && path.join("desc").is_file() && path.join("mtree").is_file()
+}
+
+pub fn read_local_database() -> Result<LocalDatabase> {
+    Path::new("/var/lib/pacman/local")
+        .read_dir()?
+        .filter_map(|path| {
+            let path = match path {
+                Ok(x) => x.path(),
+                Err(e) => {
+                    eprintln!("Error reading directory in local database: '{}'", e);
+                    return None;
+                }
+            };
+            if !is_valid_local_entry_dir(&path) {
+                return None;
+            }
+            Some(LocalDatabaseEntry::new_from_directory(path))
+        })
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map(|mut x| {
+            x.sort_unstable_by(|left, right| left.desc.name.as_str().cmp(right.desc.name.as_str()));
+            x
+        })
+        .map(|x| LocalDatabase(x))
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, primitive};
 
 use crate::Result;
 
@@ -17,23 +17,25 @@ lazy_static! {
 /// about the pacakge itself, not the files it owns.
 #[derive(Debug)]
 pub struct PackageDescription {
-    name: Option<String>,
-    version: Option<String>,
-    pkgbase: Option<String>,
-    description: Option<String>,
-    url: Option<String>,
-    arch: Option<Arch>,
-    build_date: Option<u64>,
-    install_date: Option<u64>,
-    packager: Option<Packager>,
-    size: Option<u64>,
-    reason: Option<u8>, // This appears to always be 1. TODO make this an enum
-    licences: Option<Vec<String>>,
-    validation: Option<Validation>,
-    replaces: Option<Vec<String>>,
-    dependencies: Option<Vec<String>>,
-    optional_dependencies: Option<Vec<OptionalDependency>>,
-    provides: Option<Vec<String>>,
+    pub name: String,
+    pub version: String,
+    pub pkgbase: Option<String>,
+    pub description: Option<String>,
+    pub url: Option<String>,
+    pub arch: Option<Arch>,
+    pub build_date: Option<u64>,
+    pub install_date: Option<u64>,
+    pub packager: Option<Packager>,
+    pub size: Option<u64>,
+    pub reason: Option<u8>, // This appears to always be 1. TODO make this an enum
+    pub licences: Vec<String>,
+    pub validation: Option<Validation>,
+    pub replaces: Vec<String>,
+    pub dependencies: Vec<String>,
+    pub optional_dependencies: Vec<OptionalDependency>,
+    pub provides: Vec<String>,
+    pub groups: Vec<String>,
+    pub conflicts: Vec<String>,
 }
 
 pub fn read_desc_from_file<P: AsRef<Path>>(filepath: P) -> Result<PackageDescription> {
@@ -59,6 +61,8 @@ fn parse_desc(desc: &str) -> Result<PackageDescription> {
     let mut dependencies = None;
     let mut optional_dependencies = None;
     let mut provides = None;
+    let mut groups = None;
+    let mut conflicts = None;
     for captures in SPLITTING_REGEX.captures_iter(desc) {
         match &captures[1] {
             "NAME" => {
@@ -162,7 +166,7 @@ fn parse_desc(desc: &str) -> Result<PackageDescription> {
                             let mut it = line.split(':');
                             OptionalDependency {
                                 package: it.next().map(|x| x.trim().to_owned()).unwrap(),
-                                reason: it.next().map(|x| x.trim().to_owned()).unwrap(),
+                                reason: it.next().map(|x| x.trim().to_owned()),
                             }
                         })
                         .collect()
@@ -177,14 +181,38 @@ fn parse_desc(desc: &str) -> Result<PackageDescription> {
                         .collect()
                 });
             }
+            "GROUPS" => {
+                groups = captures.get(2).map(|x| {
+                    x.as_str()
+                        .trim()
+                        .split('\n')
+                        .map(|x| x.trim().to_owned())
+                        .collect()
+                })
+            }
+            "CONFLICTS" => {
+                conflicts = captures.get(2).map(|x| {
+                    x.as_str()
+                        .trim()
+                        .split('\n')
+                        .map(|pkgname| pkgname.trim().to_owned())
+                        .collect()
+                });
+            }
 
-            ref x => return Err(format!("Unknown desc section: '{}'", x).into()),
+            ref x => {
+                return Err(format!(
+                    "Unknown section '{}' in desc file for '{}'",
+                    x,
+                    name.unwrap_or_else(|| "<name not found>".into())
+                )
+                .into())
+            }
         }
     }
-
     Ok(PackageDescription {
-        name,
-        version,
+        name: name.ok_or("Every package must have a name.")?,
+        version: version.ok_or("Every package must have a version.")?,
         pkgbase,
         description,
         url,
@@ -194,38 +222,40 @@ fn parse_desc(desc: &str) -> Result<PackageDescription> {
         packager,
         size,
         reason,
-        licences,
+        licences: licences.unwrap_or_else(|| Vec::new()),
         validation,
-        replaces,
-        dependencies,
-        optional_dependencies,
-        provides,
+        replaces: replaces.unwrap_or_else(|| Vec::new()),
+        dependencies: dependencies.unwrap_or_else(|| Vec::new()),
+        optional_dependencies: optional_dependencies.unwrap_or_else(|| Vec::new()),
+        provides: provides.unwrap_or_else(|| Vec::new()),
+        groups: groups.unwrap_or_else(|| Vec::new()),
+        conflicts: conflicts.unwrap_or_else(|| Vec::new()),
     })
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
-enum Arch {
+pub enum Arch {
     Any,
     x86_64,
 }
 
 #[derive(Debug)]
-enum Validation {
+pub enum Validation {
     None,
     Pgp,
 }
 
 #[derive(Debug)]
-struct Packager {
-    name: String,
-    email: Option<String>,
+pub struct Packager {
+    pub name: String,
+    pub email: Option<String>,
 }
 
 #[derive(Debug)]
-struct OptionalDependency {
-    package: String,
-    reason: String,
+pub struct OptionalDependency {
+    pub package: String,
+    pub reason: Option<String>,
 }
 
 #[cfg(test)]

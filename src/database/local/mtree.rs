@@ -3,24 +3,37 @@ use std::path::Path;
 
 use crate::Result;
 
-/// Represents the contents of the `mtree` file of a local database entry. This stores data about
-/// the files owned by the package.
+/// Represents a single entry in an `mtree` file. This contains information about a single file
+/// owned by a single pacakge.
 #[derive(Debug)]
 pub struct MTreeEntry {
+    /// The path of the file. Pacman seems to use relative paths from root, but it is much easier
+    /// to work with absolute paths instead, so the leading `.` is stripped
     pub filepath: String,
+    /// The checksum of the file.
     pub hashes: Hashes,
+    /// The unix permissions of the file.
     pub mode: u16,
+    /// The group that owns the file.
     pub gid: u32,
+    /// The user that owns the file.
     pub uid: u32,
+    /// The time that the file was created.
     pub time: u64,
+    /// The size of the file, in bytes.
     pub filesize: usize,
+    /// The type of the file.
     pub filetype: FileType,
+    /// If the type is SymbolicLink, the target of the link, relative from the position of the file
+    /// itself.
+    pub link: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum FileType {
     Directory,
     File,
+    SymbolicLink,
 
     None,
 }
@@ -55,6 +68,7 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
             md5: None,
             sha256: None,
         };
+        let mut link = None;
         let mut time = 0;
         let mut filetype = FileType::None;
 
@@ -81,13 +95,23 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
                 "uid" => uid = second.parse()?,
                 "size" => filesize = second.parse()?,
                 "time" => time = second.parse::<f64>()? as u64,
+                "link" => link = Some(second.to_owned()),
                 "type" => {
                     filetype = match second {
                         "file" => FileType::File,
                         "dir" => FileType::Directory,
-                        _ => return Err(format!("Unknown filetype '{}'", second).into()),
+                        "link" => FileType::SymbolicLink,
+                        _ => {
+                            return Err(format!(
+                                "Unknown filetype '{}' found in path '{}'",
+                                second,
+                                filepath.unwrap()
+                            )
+                            .into())
+                        }
                     }
                 }
+
                 x if first.contains("digest") => {
                     let x = x.strip_suffix("digest").unwrap();
                     match x {
@@ -97,7 +121,11 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
                     }
                 }
 
-                x => return Err(format!("Unknown mtree section '{}'.", x).into()),
+                x => {
+                    return Err(
+                        format!("Unknown mtree section '{}' found in '{}'.", x, line).into(),
+                    )
+                }
             }
         }
         if let Some(filepath) = filepath {
@@ -110,6 +138,7 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
                 time,
                 filesize,
                 filetype,
+                link,
             });
         }
     }
