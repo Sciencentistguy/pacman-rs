@@ -1,9 +1,9 @@
 use std::path::Path;
 
+use crate::Result;
+
 use lazy_static::lazy_static;
 use regex::Regex;
-
-use crate::Result;
 
 lazy_static! {
     static ref SPLITTING_REGEX: Regex = Regex::new(r"%(\w+)%\n((?:.+\n)+)").unwrap();
@@ -13,6 +13,8 @@ lazy_static! {
     .unwrap();
 }
 
+/// Represents the data from the `desc` file of a local database entry. This contains information
+/// about the pacakge itself, not the files it owns.
 #[derive(Debug)]
 pub struct PackageDescription {
     name: Option<String>,
@@ -34,12 +36,12 @@ pub struct PackageDescription {
     provides: Option<Vec<String>>,
 }
 
-fn read_desc_from_file<P: AsRef<Path>>(filepath: P) -> Result<PackageDescription> {
+pub fn read_desc_from_file<P: AsRef<Path>>(filepath: P) -> Result<PackageDescription> {
     let desc = std::fs::read_to_string(filepath)?;
     parse_desc(desc.as_str())
 }
 
-pub fn parse_desc(desc: &str) -> Result<PackageDescription> {
+fn parse_desc(desc: &str) -> Result<PackageDescription> {
     let mut name = None;
     let mut version = None;
     let mut pkgbase = None;
@@ -178,10 +180,6 @@ pub fn parse_desc(desc: &str) -> Result<PackageDescription> {
 
             ref x => return Err(format!("Unknown desc section: '{}'", x).into()),
         }
-    }
-    let splitted = desc.split('%');
-    for thing in splitted {
-        println!("{}", thing);
     }
 
     Ok(PackageDescription {

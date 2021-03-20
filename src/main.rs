@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-mod interface;
 mod database;
+mod interface;
 
 use crate::interface::Args;
 use crate::interface::Mode;

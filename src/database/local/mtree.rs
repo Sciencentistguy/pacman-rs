@@ -3,20 +3,22 @@ use std::path::Path;
 
 use crate::Result;
 
+/// Represents the contents of the `mtree` file of a local database entry. This stores data about
+/// the files owned by the package.
 #[derive(Debug)]
 pub struct MTreeEntry {
-    filepath: String,
-    hashes: Hashes,
-    mode: u16,
-    gid: u32,
-    uid: u32, // My system (arch linux) uses a uint32_t for uid_t
-    time: u64,
-    filesize: usize,
-    filetype: FileType,
+    pub filepath: String,
+    pub hashes: Hashes,
+    pub mode: u16,
+    pub gid: u32,
+    pub uid: u32,
+    pub time: u64,
+    pub filesize: usize,
+    pub filetype: FileType,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum FileType {
+#[derive(Debug, PartialEq, Eq)]
+pub enum FileType {
     Directory,
     File,
 
@@ -24,11 +26,12 @@ enum FileType {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Hashes {
+pub struct Hashes {
     md5: Option<String>,
     sha256: Option<String>,
 }
 
+/// Reads an `mtree` file from disk, and returns a Vec of the parsed data.
 pub fn read_mtree_from_file<P: AsRef<Path>>(filepath: P) -> Result<Vec<MTreeEntry>> {
     let mtree = {
         let gzipped_bytes = std::fs::read(filepath)?;
@@ -56,12 +59,15 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
         let mut filetype = FileType::None;
 
         for section in line.trim().split(' ').map(|x| x.trim()) {
-            println!("starting section '{}'", section);
             if !section.contains('=') {
                 if section.starts_with("/set") || section == "#mtree" {
                     continue;
                 } else {
-                    filepath = Some(section.to_owned());
+                    filepath = if section.starts_with(".") {
+                        section.strip_prefix('.').map(|x| x.to_owned())
+                    } else {
+                        Some(section.to_owned())
+                    };
                     continue;
                 }
             }
@@ -93,11 +99,10 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
 
                 x => return Err(format!("Unknown mtree section '{}'.", x).into()),
             }
-            println!("{}", section);
         }
-        if filepath.is_some() {
+        if let Some(filepath) = filepath {
             ret.push(MTreeEntry {
-                filepath: filepath.unwrap(),
+                filepath,
                 hashes,
                 mode,
                 gid,
