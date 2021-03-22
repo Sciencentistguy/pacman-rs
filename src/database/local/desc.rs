@@ -1,4 +1,4 @@
-use std::{path::Path, primitive};
+use std::path::Path;
 
 use crate::Result;
 
@@ -222,14 +222,14 @@ fn parse_desc(desc: &str) -> Result<PackageDescription> {
         packager,
         size,
         reason,
-        licences: licences.unwrap_or_else(|| Vec::new()),
+        licences: licences.unwrap_or_else(Vec::new),
         validation,
-        replaces: replaces.unwrap_or_else(|| Vec::new()),
-        dependencies: dependencies.unwrap_or_else(|| Vec::new()),
-        optional_dependencies: optional_dependencies.unwrap_or_else(|| Vec::new()),
-        provides: provides.unwrap_or_else(|| Vec::new()),
-        groups: groups.unwrap_or_else(|| Vec::new()),
-        conflicts: conflicts.unwrap_or_else(|| Vec::new()),
+        replaces: replaces.unwrap_or_else(Vec::new),
+        dependencies: dependencies.unwrap_or_else(Vec::new),
+        optional_dependencies: optional_dependencies.unwrap_or_else(Vec::new),
+        provides: provides.unwrap_or_else(Vec::new),
+        groups: groups.unwrap_or_else(Vec::new),
+        conflicts: conflicts.unwrap_or_else(Vec::new),
     })
 }
 

@@ -77,7 +77,7 @@ fn read_mtree(mtree: &str) -> Result<Vec<MTreeEntry>> {
                 if section.starts_with("/set") || section == "#mtree" {
                     continue;
                 } else {
-                    filepath = if section.starts_with(".") {
+                    filepath = if section.starts_with('.') {
                         section.strip_prefix('.').map(|x| x.to_owned())
                     } else {
                         Some(section.to_owned())

@@ -23,15 +23,16 @@ fn main() -> Result<()> {
             unimplemented!()
         }
         Mode::Query => {
-            let local_database = database::local::read_local_database()?;
-            for package in local_database.iter() {
+            let mut local_database = database::local::LocalDatabase::new();
+            local_database.populate_full_database()?;
+            for (name, pkg) in local_database.db {
                 let style = Style::new().bold();
                 println!(
                     "{} {}",
-                    style.paint(package.desc.name.as_str()),
+                    style.paint(name.as_str()),
                     style
                         .fg(ansi_term::Color::Green)
-                        .paint(package.desc.version.as_str())
+                        .paint(pkg.desc.version.as_str())
                 );
             }
             Ok(())
