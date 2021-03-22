@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::Result;
 
 /// Represents a single entry in an `mtree` file. This contains information about a single file
-/// owned by a single pacakge.
+/// owned by a single package.
 #[derive(Debug)]
 pub struct MTreeEntry {
     /// The path of the file. Pacman seems to use relative paths from root, but it is much easier

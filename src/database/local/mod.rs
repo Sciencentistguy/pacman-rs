@@ -8,7 +8,7 @@ pub mod files;
 pub mod mtree;
 
 /// Represents an entry in the pacman local database (found in `/var/lib/pacman/local`). This
-/// contains information about a specific installed pacakge, and the files it owns.
+/// contains information about a specific installed package, and the files it owns.
 #[derive(Debug)]
 pub struct LocalDatabaseEntry {
     pub desc: PackageDescription,
@@ -49,7 +49,7 @@ fn is_valid_local_entry_dir<P: AsRef<Path>>(path: P) -> bool {
     path.is_dir() && path.join("desc").is_file() && path.join("mtree").is_file()
 }
 
-/// A lazy representation of the local database. It reads pacakges from the filesystem when they
+/// A lazy representation of the local database. It reads packages from the filesystem when they
 /// are requested.
 pub struct LocalDatabase {
     pub db: HashMap<String, LocalDatabaseEntry>,
@@ -64,7 +64,7 @@ impl LocalDatabase {
         }
     }
 
-    pub fn pacakge_names(&self) -> impl Iterator<Item = &str> {
+    pub fn package_names(&self) -> impl Iterator<Item = &str> {
         self.db.iter().map(|(name, _)| name.as_str())
     }
 
@@ -86,7 +86,7 @@ impl LocalDatabase {
             .collect()
     }
 
-    /// Retrieves a LocalDatabaseEntry for the pacakge with a specified name. If this package is
+    /// Retrieves a LocalDatabaseEntry for the package with a specified name. If this package is
     /// present in the LazyLocalDatabase, it just returns a reference to it, otherwise it attempts
     /// to find the package in the pacman database. If it finds it, it reads it into the
     /// LazyLocalDatabase and then returns a reference to it. Returns Err(_) if the package cannot
@@ -94,15 +94,15 @@ impl LocalDatabase {
     pub fn get(&mut self, package_name: &str) -> Result<&LocalDatabaseEntry> {
         if let Some(entry) = self.db.get(package_name) {
             // safety: This is to work around a limitation of the compiler. These two pointers
-            // never ailas so its fine to work around the borrow checker here
+            // never alias so its fine to work around the borrow checker here
             Ok(unsafe { &*(entry as *const _) })
         } else {
-            self.read_pacakge(package_name)
+            self.read_package(package_name)
         }
     }
 
-    /// Read the contents of a pacakge, by name
-    pub fn read_pacakge(&mut self, package_name: &str) -> Result<&LocalDatabaseEntry> {
+    /// Read the contents of a package, by name
+    pub fn read_package(&mut self, package_name: &str) -> Result<&LocalDatabaseEntry> {
         for subdir in self.path.read_dir()? {
             let subdir = subdir?;
             if let Some(true) = subdir
@@ -146,30 +146,6 @@ impl LocalDatabase {
     }
 }
 
-/// Reads the entire local database of a system, eagerly. This is rather slow.
-//pub fn read_local_database() -> Result<LocalDatabase> {
-//Path::new("/var/lib/pacman/local")
-//.read_dir()?
-//.filter_map(|path| {
-//let path = match path {
-//Ok(x) => x.path(),
-//Err(e) => {
-//eprintln!("Error reading directory in local database: '{}'", e);
-//return None;
-//}
-//};
-//if !is_valid_local_entry_dir(&path) {
-//return None;
-//}
-//Some(LocalDatabaseEntry::new_from_directory(path))
-//})
-//.collect::<std::result::Result<Vec<_>, _>>()
-//.map(|mut x| {
-//x.sort_unstable_by(|left, right| left.desc.name.as_str().cmp(right.desc.name.as_str()));
-//x
-//})
-//.map(LocalDatabase)
-//}
 
 #[cfg(test)]
 mod test {

@@ -14,7 +14,7 @@ lazy_static! {
 }
 
 /// Represents the data from the `desc` file of a local database entry. This contains information
-/// about the pacakge itself, not the files it owns.
+/// about the package itself, not the files it owns.
 #[derive(Debug)]
 pub struct PackageDescription {
     pub name: String,
@@ -101,7 +101,7 @@ fn parse_desc(desc: &str) -> Result<PackageDescription> {
             "PACKAGER" => {
                 packager = captures.get(2).and_then(|x| {
                     let x = x.as_str().trim();
-                    if x == "Unknown pacakger" {
+                    if x == "Unknown packager" {
                         return None;
                     }
                     let name = x[..x.find('<').map(|x| x - 1).unwrap_or(x.len())]
